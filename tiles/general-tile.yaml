@@ -1,0 +1,36 @@
+apiVersion: cognitive-streaming/v1
+kind: Tile
+metadata:
+  name: general
+  version: 1.0.0
+  description: Generalista para conversa, síntese e tradução
+  tags: [general, conversation, summary, translation]
+model:
+  base: qwen3:4b
+  quantization: Q4_K_M
+  context_length: 4096
+  system_prompt: |
+    You are a helpful assistant. Be concise and friendly.
+    Answer directly and clearly.
+routing:
+  utterances:
+    - what is
+    - tell me about
+    - summarise
+    - translate
+    - what year was
+    - who is
+    - give me a recipe
+    - write a poem
+  threshold: 0.70
+  priority: 5
+cache:
+  ttl_seconds: 7200
+  similarity_threshold: 0.82
+  max_entries: 1000
+  scope: tile
+scheduler:
+  keep_warm_after: 600
+  prewarm_on: [general]
+  eviction_priority: high
+dependencies: []

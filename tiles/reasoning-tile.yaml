@@ -1,0 +1,36 @@
+apiVersion: cognitive-streaming/v1
+kind: Tile
+metadata:
+  name: reasoning
+  version: 1.0.0
+  description: Especialista em análise, comparação e raciocínio
+  tags: [reasoning, analysis, comparison, planning]
+model:
+  base: qwen3:4b
+  quantization: Q4_K_M
+  context_length: 4096
+  system_prompt: |
+    You are an analytical assistant. Think step by step.
+    Present pros and cons clearly. Be concise and structured.
+routing:
+  utterances:
+    - explain why
+    - what are the pros and cons
+    - analyse this situation
+    - compare these options
+    - what is the best approach
+    - think step by step
+    - evaluate the trade-offs
+    - what would happen if
+  threshold: 0.75
+  priority: 8
+cache:
+  ttl_seconds: 1800
+  similarity_threshold: 0.88
+  max_entries: 300
+  scope: tile
+scheduler:
+  keep_warm_after: 180
+  prewarm_on: [reasoning, general]
+  eviction_priority: medium
+dependencies: []

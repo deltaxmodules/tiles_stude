@@ -1,0 +1,36 @@
+apiVersion: cognitive-streaming/v1
+kind: Tile
+metadata:
+  name: code
+  version: 1.0.0
+  description: Especialista em programação e debugging
+  tags: [code, programming, debugging]
+model:
+  base: qwen2.5-coder:3b
+  quantization: Q4_K_M
+  context_length: 4096
+  system_prompt: |
+    You are an expert programmer. Provide clean, working code.
+    Always explain your reasoning. Prefer simple solutions.
+routing:
+  utterances:
+    - write a function
+    - fix this bug
+    - debug my code
+    - how do I implement
+    - refactor this
+    - write unit tests
+    - syntax error
+    - write a class
+  threshold: 0.75
+  priority: 10
+cache:
+  ttl_seconds: 3600
+  similarity_threshold: 0.85
+  max_entries: 500
+  scope: tile
+scheduler:
+  keep_warm_after: 300
+  prewarm_on: [code]
+  eviction_priority: low
+dependencies: []
