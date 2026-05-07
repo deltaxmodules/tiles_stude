@@ -26,20 +26,35 @@ async def chat(req: ChatRequest):
     if route_name:
         scheduler.record_route(route_name)
 
+    tile_name = route_name or DEFAULT_TILE_NAME
     tile = get_tile(route_name) if route_name else get_tile(DEFAULT_TILE_NAME)
     ttl = tile.ttl_seconds if tile else DEFAULT_TILE_TTL_SECONDS
     sim_threshold = tile.similarity_threshold if tile else DEFAULT_CACHE_SIMILARITY_THRESHOLD
 
     t1 = time.perf_counter()
-    cached = get_cached(query, route_name or DEFAULT_TILE_NAME, sim_threshold)
+    cached = get_cached(query, tile_name, sim_threshold)
     cache_ms = (time.perf_counter() - t1) * 1000
 
     if cached:
         log.info('request', route=route_name, model=model, cache='hit', routing_ms=round(routing_ms, 2), cache_ms=round(cache_ms, 2), tile_ttl=ttl)
-        return {'choices': [{'message': {'role': 'assistant', 'content': cached}}]}
+        response = {'choices': [{'message': {'role': 'assistant', 'content': cached}}]}
+        if req.include_trace:
+            response['trace'] = {
+                'route': route_name,
+                'tile': tile_name,
+                'model': model,
+                'cache': 'hit',
+                'warm': scheduler.is_warm(tile_name),
+                'metrics_ms': {
+                    'routing': round(routing_ms, 2),
+                    'cache': round(cache_ms, 2),
+                    'generation': 0.0,
+                },
+            }
+        return response
 
     msgs = [m.model_dump() for m in req.messages]
-    is_warm = scheduler.is_warm(route_name or DEFAULT_TILE_NAME)
+    is_warm = scheduler.is_warm(tile_name)
 
     async def event_stream():
         full = []
@@ -47,7 +62,7 @@ async def chat(req: ChatRequest):
             full.append(token)
             yield f'data: {token}\n\n'
         response_text = ''.join(full)
-        set_cache(query, response_text, route_name or DEFAULT_TILE_NAME, ttl)
+        set_cache(query, response_text, tile_name, ttl)
         log.info('request', route=route_name, model=model, cache='miss', routing_ms=round(routing_ms, 2), cache_ms=round(cache_ms, 2), warm=is_warm, tile_ttl=ttl)
 
     if req.stream:
@@ -59,11 +74,25 @@ async def chat(req: ChatRequest):
         full_tokens.append(token)
     response_text = ''.join(full_tokens)
     gen_ms = (time.perf_counter() - t2) * 1000
-    set_cache(query, response_text, route_name or DEFAULT_TILE_NAME, ttl)
+    set_cache(query, response_text, tile_name, ttl)
 
     log.info('request', route=route_name, model=model, cache='miss', routing_ms=round(routing_ms, 2), cache_ms=round(cache_ms, 2), gen_ms=round(gen_ms, 2), warm=is_warm, tile_ttl=ttl)
 
-    return {'choices': [{'message': {'role': 'assistant', 'content': response_text}}]}
+    response = {'choices': [{'message': {'role': 'assistant', 'content': response_text}}]}
+    if req.include_trace:
+        response['trace'] = {
+            'route': route_name,
+            'tile': tile_name,
+            'model': model,
+            'cache': 'miss',
+            'warm': is_warm,
+            'metrics_ms': {
+                'routing': round(routing_ms, 2),
+                'cache': round(cache_ms, 2),
+                'generation': round(gen_ms, 2),
+            },
+        }
+    return response
 
 
 @router.get('/health')

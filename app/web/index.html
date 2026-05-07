@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cognitive Streaming Research MVP</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <section class="chat" aria-label="Research chat">
+        <div class="trace" id="tracePanel" aria-live="polite">
+          <div class="trace-title">Execution Trace</div>
+          <ul id="traceList" class="trace-list"></ul>
+        </div>
+        <div class="chat-log" id="chatLog"></div>
+        <form class="chat-form" id="chatForm">
+          <textarea id="prompt" placeholder="Ask a question and run experiments..." required></textarea>
+          <button type="submit" id="sendBtn">Send</button>
+        </form>
+      </section>
+      <p class="hint">This UI sends requests to <code>/v1/chat/completions</code> with <code>stream=false</code>.</p>
+    </div>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

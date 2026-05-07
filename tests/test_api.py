@@ -41,6 +41,24 @@ def test_chat_non_stream_cache_hit(monkeypatch):
     assert resp.json()['choices'][0]['message']['content'] == 'from-cache'
 
 
+def test_chat_non_stream_cache_hit_with_trace(monkeypatch):
+    monkeypatch.setattr(routes, 'route', lambda query: ('general', 'fake-model'))
+    monkeypatch.setattr(routes, 'get_cached', lambda *args, **kwargs: 'from-cache')
+    monkeypatch.setattr(routes, 'get_tile', lambda name: _fake_tile(name or 'general'))
+
+    resp = client.post(
+        '/v1/chat/completions',
+        json={'messages': [{'role': 'user', 'content': 'hello'}], 'stream': False, 'include_trace': True},
+    )
+
+    body = resp.json()
+    assert resp.status_code == 200
+    assert body['choices'][0]['message']['content'] == 'from-cache'
+    assert body['trace']['cache'] == 'hit'
+    assert body['trace']['tile'] == 'general'
+    assert 'metrics_ms' in body['trace']
+
+
 def test_chat_non_stream_cache_miss(monkeypatch):
     monkeypatch.setattr(routes, 'route', lambda query: ('general', 'fake-model'))
     monkeypatch.setattr(routes, 'get_cached', lambda *args, **kwargs: None)
@@ -60,11 +78,13 @@ def test_chat_non_stream_cache_miss(monkeypatch):
 
     resp = client.post(
         '/v1/chat/completions',
-        json={'messages': [{'role': 'user', 'content': 'hello'}], 'stream': False},
+        json={'messages': [{'role': 'user', 'content': 'hello'}], 'stream': False, 'include_trace': True},
     )
 
+    body = resp.json()
     assert resp.status_code == 200
-    assert resp.json()['choices'][0]['message']['content'] == 'foobar'
+    assert body['choices'][0]['message']['content'] == 'foobar'
+    assert body['trace']['cache'] == 'miss'
     assert calls['set_cache'] == 1
 
 

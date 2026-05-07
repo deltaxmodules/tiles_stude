@@ -9,3 +9,4 @@ class Message(BaseModel):
 class ChatRequest(BaseModel):
     messages: list[Message]
     stream: bool = False
+    include_trace: bool = False
